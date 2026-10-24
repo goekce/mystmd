@@ -1,25 +1,25 @@
-import fs from 'node:fs';
+import { computeHash, hashAndCopyStaticFile, isUrl } from 'myst-cli-utils';
 import type { GenericNode, GenericParent } from 'myst-common';
 import { RuleId, plural } from 'myst-common';
-import { computeHash, hashAndCopyStaticFile, isUrl } from 'myst-cli-utils';
-import { remove } from 'unist-util-remove';
-import { selectAll } from 'unist-util-select';
-import path from 'node:path';
-import type { VFileMessage } from 'vfile-message';
 import type { PageFrontmatter } from 'myst-frontmatter';
 import type { Image } from 'myst-spec-ext';
 import { extFromMimeType } from 'nbtx';
-import type { ISession } from '../session/types.js';
+import fs from 'node:fs';
+import path from 'node:path';
+import { remove } from 'unist-util-remove';
+import { selectAll } from 'unist-util-select';
+import type { VFileMessage } from 'vfile-message';
 import { castSession } from '../session/cache.js';
+import type { ISession } from '../session/types.js';
 import { watch } from '../store/index.js';
 import { addWarningForFile } from '../utils/addWarningForFile.js';
 import { fetchRemoteAsset } from '../utils/fetchRemoteAsset.js';
+import { ffmpeg, imagemagick, inkscape } from '../utils/index.js';
 import {
   ImageExtensions,
   KNOWN_IMAGE_EXTENSIONS,
   KNOWN_VIDEO_EXTENSIONS,
 } from '../utils/resolveExtension.js';
-import { ffmpeg, imagemagick, inkscape } from '../utils/index.js';
 import { getSourceFolder } from './links.js';
 export const BASE64_HEADER_SPLIT = ';base64,';
 
@@ -73,8 +73,8 @@ export async function downloadAndSaveImage(
   session.log.debug(`Fetching image: ${url}...\n  -> saving to: ${stem}`);
   try {
     const { name, contentType } = await fetchRemoteAsset(session, url, fileFolder, stem);
-    if (!contentType.startsWith('image/')) {
-      throw new Error(`${url} content-type "${contentType}" is not an image`);
+    if (!contentType.startsWith('image/') && !contentType.startsWith('video/')) {  // Image directive can also load videos
+      throw new Error(`${url} content-type "${contentType}" is not an image or video`);
     }
     return name;
   } catch (error) {
